@@ -7,6 +7,17 @@ type Group = {
   items: Instrument[]
 }
 
+type StocksFilter = 'ALL' | 'CASH' | 'NFO' | 'BFO' | 'CDS' | 'MCX'
+
+const FILTERS: Array<{ key: StocksFilter; label: string }> = [
+  { key: 'ALL', label: 'All' },
+  { key: 'CASH', label: 'Cash' },
+  { key: 'NFO', label: 'NFO' },
+  { key: 'BFO', label: 'BFO' },
+  { key: 'CDS', label: 'CDS' },
+  { key: 'MCX', label: 'MCX' },
+]
+
 export function StocksDirectory() {
   const loaded = useInstrumentsStore((s) => s.loaded)
   const loading = useInstrumentsStore((s) => s.loading)
@@ -16,6 +27,7 @@ export function StocksDirectory() {
   const addToWatchlist = useInstrumentsStore((s) => s.addToWatchlist)
   const chunkSize = 250
   const [visibleCount, setVisibleCount] = useState(chunkSize)
+  const [activeFilter, setActiveFilter] = useState<StocksFilter>('ALL')
 
   const sorted = useMemo<Instrument[]>(
     () =>
@@ -24,10 +36,13 @@ export function StocksDirectory() {
           const hasLetterSymbol = /^[A-Za-z]/.test(instrument.tradingsymbol ?? '')
           const normalizedName = instrument.name?.trim() ?? ''
           const hasValidName = normalizedName.length > 0 && normalizedName !== '-'
-          return hasLetterSymbol && hasValidName
+          if (!hasLetterSymbol || !hasValidName) return false
+          if (activeFilter === 'ALL') return true
+          if (activeFilter === 'CASH') return instrument.exchange === 'NSE' || instrument.exchange === 'BSE'
+          return instrument.exchange === activeFilter || instrument.segment.startsWith(activeFilter)
         })
         .sort((a, b) => a.tradingsymbol.localeCompare(b.tradingsymbol)),
-    [searchPool],
+    [searchPool, activeFilter],
   )
 
   useEffect(() => {
@@ -90,6 +105,20 @@ export function StocksDirectory() {
           Showing {visibleItems.length.toLocaleString('en-IN')} / {sorted.length.toLocaleString('en-IN')}
         </span>
         {!hasMore && <span>All loaded</span>}
+      </div>
+      <div className="stocks-filter-row" role="tablist" aria-label="Stocks filters">
+        {FILTERS.map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            role="tab"
+            aria-selected={activeFilter === filter.key}
+            className={`ghost-button compact stocks-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
+            onClick={() => setActiveFilter(filter.key)}
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
       {grouped.map((group) => (
         <section key={group.letter} className="stocks-group" aria-label={`Section ${group.letter}`}>
