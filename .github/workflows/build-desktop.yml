@@ -47,7 +47,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - name: Install dependencies
@@ -68,7 +68,7 @@ jobs:
         run: npm run build
 
       - name: Build desktop package
-        run: npx electron-builder ${{ matrix.target.electron_builder_args }}
+        run: npx electron-builder ${{ matrix.target.electron_builder_args }} --publish never
 
       - name: List dist output
         run: ls -R dist || echo "No dist directory"
