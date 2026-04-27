@@ -191,6 +191,7 @@ declare global {
       }): Promise<T>
       fetchInstruments(p?: { exchange?: string }): Promise<Instrument[]>
       openExternal(url: string): Promise<boolean>
+      saveWatchlistsExport(payload: string): Promise<{ filePath: string }>
       onMockFeedControl(callback: (control: MockFeedControl) => void): () => void
     }
   }

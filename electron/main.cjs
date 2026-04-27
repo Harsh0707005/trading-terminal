@@ -8,6 +8,7 @@ const KITE_API_BASE = 'https://api.kite.trade'
 const KITE_LOGIN_BASE = 'https://kite.zerodha.com/connect/login'
 const SESSION_FILE = path.join(app.getPath('userData'), 'kite-session.json')
 const INSTRUMENTS_DIR = path.join(app.getPath('userData'), 'instruments')
+const DATA_DIR = path.join(app.getPath('userData'), 'data')
 const MOCK_FEED_PORT = Number(process.env.MOCK_FEED_PORT || 17641)
 
 loadDotenv()
@@ -383,4 +384,13 @@ ipcMain.handle('kite:open-external', async (_e, url) => {
   const { shell } = require('electron')
   await shell.openExternal(url)
   return true
+})
+
+ipcMain.handle('kite:save-watchlists-export', (_e, payload) => {
+  if (typeof payload !== 'string' || !payload.trim()) throw new Error('Export content is empty')
+  fs.mkdirSync(DATA_DIR, { recursive: true })
+  const stamp = new Date().toISOString().replace(/:/g, '-')
+  const filePath = path.join(DATA_DIR, `watchlists-${stamp}.json`)
+  fs.writeFileSync(filePath, payload, 'utf8')
+  return { filePath }
 })

@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('kite', {
   request: (params) => ipcRenderer.invoke('kite:request', params),
   fetchInstruments: (params) => ipcRenderer.invoke('kite:fetch-instruments', params),
   openExternal: (url) => ipcRenderer.invoke('kite:open-external', url),
+  saveWatchlistsExport: (payload) => ipcRenderer.invoke('kite:save-watchlists-export', payload),
   onMockFeedControl: (callback) => {
     const listener = (_event, payload) => callback(payload)
     ipcRenderer.on('mock-feed:control', listener)

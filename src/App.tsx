@@ -1,7 +1,9 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type ChangeEvent,
   type CSSProperties,
 } from 'react'
 import './App.css'
@@ -40,6 +42,8 @@ function Terminal() {
   const setActiveWatchlist = useInstrumentsStore((s) => s.setActiveWatchlist)
   const loadInstruments = useInstrumentsStore((s) => s.load)
   const loadWatchlistFromStorage = useInstrumentsStore((s) => s.loadWatchlistFromStorage)
+  const exportWatchlists = useInstrumentsStore((s) => s.exportWatchlists)
+  const importWatchlists = useInstrumentsStore((s) => s.importWatchlists)
   const instrumentsLoaded = useInstrumentsStore((s) => s.loaded)
 
   const startTicker = useTicksStore((s) => s.start)
@@ -52,6 +56,7 @@ function Terminal() {
   const [selectedToken, setSelectedToken] = useState<number | null>(null)
   const [marketView, setMarketView] = useState<'watchlist' | 'stocks' | 'orders' | 'positions' | 'holdings'>('watchlist')
   const [detailsVisible, setDetailsVisible] = useState(false)
+  const importInputRef = useRef<HTMLInputElement | null>(null)
   const [textScale, setTextScale] = useState(() => {
     const saved = Number(localStorage.getItem('terminal.textScale'))
     return Number.isFinite(saved) && saved > 0 ? saved : 1
@@ -127,6 +132,24 @@ function Terminal() {
         setMarketView('stocks')
         return
       }
+      if (event.key === 'F8') {
+        event.preventDefault()
+        const content = exportWatchlists()
+        void window.kite
+          .saveWatchlistsExport(content)
+          .then(({ filePath }) => {
+            window.alert(`Watchlists exported to:\n${filePath}`)
+          })
+          .catch(() => {
+            window.alert('Failed to export watchlists to data directory.')
+          })
+        return
+      }
+      if (event.key === 'F9') {
+        event.preventDefault()
+        importInputRef.current?.click()
+        return
+      }
       if (event.key === 'Escape') {
         if (detailsVisible) {
           event.preventDefault()
@@ -179,7 +202,7 @@ function Terminal() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [activeToken, detailsVisible, marketView, setActiveWatchlist])
+  }, [activeToken, detailsVisible, exportWatchlists, marketView, setActiveWatchlist])
 
   const tickerError = useTicksStore((s) => s.error)
 
@@ -201,6 +224,20 @@ function Terminal() {
   const workspaceStyle = {
     gridTemplateColumns: 'minmax(0, 1fr)',
   } satisfies CSSProperties
+
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const payload = JSON.parse(text) as unknown
+      importWatchlists(payload)
+    } catch {
+      window.alert('Invalid watchlist file. Please upload a valid JSON export.')
+    } finally {
+      event.target.value = ''
+    }
+  }
 
   return (
     <main
@@ -276,6 +313,13 @@ function Terminal() {
                 ))}
               </div>
             )}
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="visually-hidden"
+              onChange={handleImportFile}
+            />
             <div className="window-controls" aria-hidden="true">
               <span />
               <span />
