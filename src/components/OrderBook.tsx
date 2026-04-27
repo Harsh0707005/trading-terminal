@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { useOrdersStore } from '../store/ordersStore'
+import { useTicksStore } from '../store/ticksStore'
 import type { Holding, Order, Position } from '../types/kite'
 
 type BottomTab = 'portfolio' | 'orders'
@@ -12,6 +13,10 @@ export function OrderBook() {
   const refreshAll = useOrdersStore((s) => s.refreshAll)
   const cancelOrder = useOrdersStore((s) => s.cancelOrder)
   const loading = useOrdersStore((s) => s.loading)
+  const subscribe = useTicksStore((s) => s.subscribe)
+  const ticks = useTicksStore((s) => s.ticks)
+  const tickVersion = useTicksStore((s) => s.version)
+  void tickVersion
   const [activeTab, setActiveTab] = useState<BottomTab>('portfolio')
   const [portfolioSplit, setPortfolioSplit] = useState(50)
 
@@ -20,6 +25,26 @@ export function OrderBook() {
     const id = setInterval(() => refreshAll(), 5000)
     return () => clearInterval(id)
   }, [refreshAll])
+
+  useEffect(() => {
+    const tokenMap = new Map<number, string>()
+    for (const holding of holdings) tokenMap.set(holding.instrument_token, holding.exchange)
+    for (const position of positions.net) tokenMap.set(position.instrument_token, position.exchange)
+    if (!tokenMap.size) return
+    const tokens = [...tokenMap.keys()]
+    const segments: Record<number, string> = {}
+    for (const [token, exchange] of tokenMap) segments[token] = exchange
+    subscribe(tokens, 'quote', segments)
+  }, [holdings, positions.net, subscribe])
+
+  const liveHoldings = useMemo(
+    () => holdings.map((holding) => withLiveHolding(holding, ticks.get(holding.instrument_token)?.lastPrice)),
+    [holdings, ticks],
+  )
+  const livePositions = useMemo(
+    () => positions.net.map((position) => withLivePosition(position, ticks.get(position.instrument_token)?.lastPrice)),
+    [positions.net, ticks],
+  )
 
   const resizePortfolioSplit = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -71,7 +96,7 @@ export function OrderBook() {
           style={{ gridTemplateColumns: `${portfolioSplit}fr 7px ${100 - portfolioSplit}fr` }}
         >
           <BottomPanel title="Holdings" count={holdings.length}>
-            <HoldingsTable holdings={holdings} />
+            <HoldingsTable holdings={liveHoldings} />
           </BottomPanel>
           <div
             className="portfolio-resizer"
@@ -81,7 +106,7 @@ export function OrderBook() {
             onPointerDown={resizePortfolioSplit}
           />
           <BottomPanel title="Positions" count={positions.net?.length ?? 0}>
-            <PositionsTable positions={positions.net} />
+            <PositionsTable positions={livePositions} />
           </BottomPanel>
         </div>
       ) : (
@@ -271,4 +296,32 @@ function formatMoney(value: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function withLiveHolding(holding: Holding, livePrice?: number): Holding {
+  if (livePrice == null || Number.isNaN(livePrice)) return holding
+  const close = holding.close_price || 0
+  const pnl = (livePrice - holding.average_price) * holding.quantity
+  const dayChange = livePrice - close
+  const dayChangePercentage = close > 0 ? (dayChange / close) * 100 : 0
+  return {
+    ...holding,
+    last_price: livePrice,
+    pnl,
+    day_change: dayChange,
+    day_change_percentage: dayChangePercentage,
+  }
+}
+
+function withLivePosition(position: Position, livePrice?: number): Position {
+  if (livePrice == null || Number.isNaN(livePrice)) return position
+  const multiplier = position.multiplier || 1
+  const unrealised = (livePrice - position.average_price) * position.quantity * multiplier
+  const realised = position.realised || 0
+  return {
+    ...position,
+    last_price: livePrice,
+    unrealised,
+    pnl: realised + unrealised,
+  }
 }

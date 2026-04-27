@@ -235,7 +235,7 @@ button:disabled {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 272px;
+  grid-template-columns: minmax(0, 1fr) 7px 272px;
   gap: 7px;
   min-height: 0;
   padding: 7px;
@@ -426,6 +426,22 @@ button:disabled {
   overflow: auto;
   color: #111;
   background: #d6d6d6;
+}
+
+.right-rail-resizer {
+  position: relative;
+  cursor: col-resize;
+  border-left: 1px solid #6f6f6f;
+  border-right: 1px solid #b9b9b9;
+  background: #8b8f95;
+}
+
+.right-rail-resizer::before {
+  content: '';
+  position: absolute;
+  inset: 38% 2px;
+  border-left: 1px solid #555;
+  border-right: 1px solid #d8d8d8;
 }
 
 .ticket-card,
@@ -707,6 +723,11 @@ body.is-resizing-columns {
   user-select: none;
 }
 
+body.is-resizing-right-rail {
+  cursor: col-resize;
+  user-select: none;
+}
+
 .bottom-panel {
   display: grid;
   grid-template-rows: calc(24px * var(--terminal-text-scale)) minmax(0, 1fr);
@@ -847,6 +868,7 @@ body.is-resizing-columns {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .right-rail-resizer,
   .right-rail {
     display: none;
   }

@@ -47,6 +47,10 @@ function Terminal() {
 
   const [selectedToken, setSelectedToken] = useState<number | null>(null)
   const [bottomDockHeight, setBottomDockHeight] = useState(148)
+  const [rightRailWidth, setRightRailWidth] = useState(() => {
+    const saved = Number(localStorage.getItem('terminal.rightRailWidth'))
+    return Number.isFinite(saved) && saved >= 220 ? saved : 272
+  })
   const [textScale, setTextScale] = useState(() => {
     const saved = Number(localStorage.getItem('terminal.textScale'))
     return Number.isFinite(saved) && saved > 0 ? saved : 1
@@ -70,6 +74,10 @@ function Terminal() {
   useEffect(() => {
     localStorage.setItem('terminal.textScale', textScale.toFixed(2))
   }, [textScale])
+
+  useEffect(() => {
+    localStorage.setItem('terminal.rightRailWidth', String(Math.round(rightRailWidth)))
+  }, [rightRailWidth])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -143,6 +151,28 @@ function Terminal() {
     window.addEventListener('pointerup', onPointerUp, { once: true })
   }
 
+  const resizeRightRail = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = rightRailWidth
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const nextWidth = startWidth - (moveEvent.clientX - startX)
+      const maxWidth = Math.max(320, Math.floor(window.innerWidth * 0.45))
+      setRightRailWidth(Math.min(Math.max(nextWidth, 220), maxWidth))
+    }
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      document.body.classList.remove('is-resizing-right-rail')
+    }
+
+    document.body.classList.add('is-resizing-right-rail')
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp, { once: true })
+  }
+
   const topBarHeight = Math.round(34 * textScale)
   const statusBarHeight = Math.round(24 * textScale)
 
@@ -150,6 +180,9 @@ function Terminal() {
     gridTemplateRows: `${topBarHeight}px minmax(0, 1fr) 7px ${bottomDockHeight}px ${statusBarHeight}px`,
     '--terminal-text-scale': textScale,
   } satisfies CSSProperties & { '--terminal-text-scale': number }
+  const workspaceStyle = {
+    gridTemplateColumns: `minmax(0, 1fr) 7px ${Math.round(rightRailWidth)}px`,
+  } satisfies CSSProperties
 
   return (
     <main
@@ -178,7 +211,7 @@ function Terminal() {
         </div>
       </section>
 
-      <section className="workspace">
+      <section className="workspace" style={workspaceStyle}>
         <section className="market-panel" aria-label="Market watch">
           <div className="panel-title">
             <span className="panel-icon" aria-hidden="true">▣</span>
@@ -209,6 +242,14 @@ function Terminal() {
           </div>
           <Watchlist selectedToken={activeToken} onSelect={setSelectedToken} />
         </section>
+
+        <div
+          className="right-rail-resizer"
+          role="separator"
+          aria-label="Resize order ticket section"
+          aria-orientation="vertical"
+          onPointerDown={resizeRightRail}
+        />
 
         <aside className="right-rail classic-tools" aria-label="Order ticket and depth">
           <OrderTicket token={activeToken} />
