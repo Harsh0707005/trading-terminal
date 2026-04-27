@@ -400,6 +400,29 @@ button:disabled {
   height: var(--compact-row-h);
 }
 
+.portfolio-tight-table {
+  width: max-content;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.portfolio-tight-table th,
+.portfolio-tight-table td {
+  width: max-content;
+}
+
+.portfolio-tight-table th:first-child,
+.portfolio-tight-table td:first-child {
+  width: 150px;
+  max-width: 150px;
+}
+
+.portfolio-tight-table td:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stocks-directory {
   min-height: 0;
   overflow: auto;

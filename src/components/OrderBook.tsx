@@ -220,7 +220,7 @@ function PositionsTable({ positions }: { positions: Position[] }) {
         {!positions.length ? (
           <p className="empty-state muted">No open positions.</p>
         ) : (
-          <table className="market-table compact">
+          <table className="market-table compact portfolio-tight-table">
             <thead>
               <tr>
                 <th>Symbol</th>
@@ -271,7 +271,7 @@ function HoldingsTable({ holdings }: { holdings: Holding[] }) {
         {!holdings.length ? (
           <p className="empty-state muted">No holdings.</p>
         ) : (
-          <table className="market-table compact">
+          <table className="market-table compact portfolio-tight-table">
             <thead>
               <tr>
                 <th>Symbol</th>
