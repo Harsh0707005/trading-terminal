@@ -1,0 +1,67 @@
+name: Build desktop apps
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  build-desktop:
+    name: Build (${{ matrix.target.name }})
+    runs-on: ${{ matrix.target.runs_on }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: mac-arm64
+            runs_on: macos-14
+            electron_builder_args: "--mac dmg --arm64"
+            artifact_name: desktop-mac-arm64
+            artifact_paths: |
+              dist/**/*.dmg
+              dist/**/*.zip
+          - name: windows-x64
+            runs_on: windows-latest
+            electron_builder_args: "--win nsis --x64"
+            artifact_name: desktop-windows-x64
+            artifact_paths: |
+              dist/**/*.exe
+              dist/**/*.msi
+              dist/**/*.zip
+
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Build desktop package
+        run: npx electron-builder ${{ matrix.target.electron_builder_args }}
+
+      - name: List dist output
+        run: ls -R dist || echo "No dist directory"
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target.artifact_name }}
+          path: ${{ matrix.target.artifact_paths }}
+          if-no-files-found: warn
