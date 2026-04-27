@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
+import { useEffect, useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { useOrdersStore } from '../store/ordersStore'
 import { useTicksStore } from '../store/ticksStore'
 import type { Holding, Order, Position } from '../types/kite'
 
-type BottomTab = 'portfolio' | 'orders'
+type BottomView = 'holdings' | 'positions' | 'orders'
 
 type Props = {
+  view: BottomView
+  onViewChange: (view: BottomView) => void
   selectedToken: number | null
   onSelectToken: (token: number) => void
 }
 
-export function OrderBook({ selectedToken, onSelectToken }: Props) {
+export function OrderBook({ view, onViewChange, selectedToken, onSelectToken }: Props) {
   const orders = useOrdersStore((s) => s.orders)
   const positions = useOrdersStore((s) => s.positions)
   const holdings = useOrdersStore((s) => s.holdings)
@@ -22,9 +24,6 @@ export function OrderBook({ selectedToken, onSelectToken }: Props) {
   const ticks = useTicksStore((s) => s.ticks)
   const tickVersion = useTicksStore((s) => s.version)
   void tickVersion
-  const [activeTab, setActiveTab] = useState<BottomTab>('portfolio')
-  const [portfolioSplit, setPortfolioSplit] = useState(50)
-
   useEffect(() => {
     refreshAll()
     const id = setInterval(() => refreshAll(), 5000)
@@ -51,42 +50,27 @@ export function OrderBook({ selectedToken, onSelectToken }: Props) {
     [positions.net, ticks],
   )
 
-  const resizePortfolioSplit = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const container = event.currentTarget.parentElement
-    if (!container) return
-    const bounds = container.getBoundingClientRect()
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const next = ((moveEvent.clientX - bounds.left) / bounds.width) * 100
-      setPortfolioSplit(Math.min(Math.max(next, 24), 76))
-    }
-
-    const onPointerUp = () => {
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-      document.body.classList.remove('is-resizing-columns')
-    }
-
-    document.body.classList.add('is-resizing-columns')
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp, { once: true })
-  }
-
   return (
     <section className="orderbook">
       <div className="orderbook-top-tabs">
         <button
           type="button"
-          className={activeTab === 'portfolio' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('portfolio')}
+          className={view === 'holdings' ? 'tab active' : 'tab'}
+          onClick={() => onViewChange('holdings')}
         >
-          Portfolio
+          Holdings
         </button>
         <button
           type="button"
-          className={activeTab === 'orders' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('orders')}
+          className={view === 'positions' ? 'tab active' : 'tab'}
+          onClick={() => onViewChange('positions')}
+        >
+          Positions <span className="muted">({positions.net.length})</span>
+        </button>
+        <button
+          type="button"
+          className={view === 'orders' ? 'tab active' : 'tab'}
+          onClick={() => onViewChange('orders')}
         >
           Orders <span className="muted">({orders.length})</span>
         </button>
@@ -95,21 +79,14 @@ export function OrderBook({ selectedToken, onSelectToken }: Props) {
         </button>
       </div>
 
-      {activeTab === 'portfolio' ? (
-        <div
-          className="portfolio-grid"
-          style={{ gridTemplateColumns: `${portfolioSplit}fr 7px ${100 - portfolioSplit}fr` }}
-        >
+      {view === 'holdings' ? (
+        <div className="orders-single">
           <BottomPanel title="Holdings" count={holdings.length}>
             <HoldingsTable holdings={liveHoldings} selectedToken={selectedToken} onSelectToken={onSelectToken} />
           </BottomPanel>
-          <div
-            className="portfolio-resizer"
-            role="separator"
-            aria-label="Resize holdings and positions"
-            aria-orientation="vertical"
-            onPointerDown={resizePortfolioSplit}
-          />
+        </div>
+      ) : view === 'positions' ? (
+        <div className="orders-single">
           <BottomPanel title="Positions" count={positions.net?.length ?? 0}>
             <PositionsTable positions={livePositions} selectedToken={selectedToken} onSelectToken={onSelectToken} />
           </BottomPanel>

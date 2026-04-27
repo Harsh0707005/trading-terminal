@@ -18,7 +18,12 @@ const FILTERS: Array<{ key: StocksFilter; label: string }> = [
   { key: 'MCX', label: 'MCX' },
 ]
 
-export function StocksDirectory() {
+type Props = {
+  selectedToken: number | null
+  onSelect: (token: number) => void
+}
+
+export function StocksDirectory({ selectedToken, onSelect }: Props) {
   const loaded = useInstrumentsStore((s) => s.loaded)
   const loading = useInstrumentsStore((s) => s.loading)
   const load = useInstrumentsStore((s) => s.load)
@@ -141,7 +146,11 @@ export function StocksDirectory() {
                 {group.items.map((instrument) => {
                   const inWatchlist = watchlist.some((w) => w.instrumentToken === instrument.instrumentToken)
                   return (
-                    <tr key={instrument.instrumentToken}>
+                    <tr
+                      key={instrument.instrumentToken}
+                      className={selectedToken === instrument.instrumentToken ? 'active-row' : ''}
+                      onClick={() => onSelect(instrument.instrumentToken)}
+                    >
                       <td className="symbol-cell">{instrument.tradingsymbol}</td>
                       <td>{instrument.name || '—'}</td>
                       <td>{instrument.exchange}</td>
@@ -151,7 +160,10 @@ export function StocksDirectory() {
                           type="button"
                           className="ghost-button compact"
                           disabled={inWatchlist}
-                          onClick={() => addToWatchlist(instrument)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            addToWatchlist(instrument)
+                          }}
                         >
                           {inWatchlist ? 'Added' : '+ Watch'}
                         </button>

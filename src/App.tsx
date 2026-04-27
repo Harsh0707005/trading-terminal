@@ -3,15 +3,16 @@ import {
   useMemo,
   useState,
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import './App.css'
 import { LoginPanel } from './components/LoginPanel'
 import { SymbolSearch } from './components/SymbolSearch'
 import { Watchlist } from './components/Watchlist'
 import { StocksDirectory } from './components/StocksDirectory'
+import { OrdersPanel } from './components/OrdersPanel'
+import { PositionsPanel } from './components/PositionsPanel'
+import { HoldingsPanel } from './components/HoldingsPanel'
 import { OrderTicket } from './components/OrderTicket'
-import { OrderBook } from './components/OrderBook'
 import { MarketDepth } from './components/MarketDepth'
 import { useAuthStore } from './store/authStore'
 import { useInstrumentsStore } from './store/instrumentsStore'
@@ -49,12 +50,8 @@ function Terminal() {
   const refreshOrders = useOrdersStore((s) => s.refreshAll)
 
   const [selectedToken, setSelectedToken] = useState<number | null>(null)
-  const [marketView, setMarketView] = useState<'watchlist' | 'stocks'>('watchlist')
-  const [bottomDockHeight, setBottomDockHeight] = useState(148)
-  const [rightRailWidth, setRightRailWidth] = useState(() => {
-    const saved = Number(localStorage.getItem('terminal.rightRailWidth'))
-    return Number.isFinite(saved) && saved >= 220 ? saved : 272
-  })
+  const [marketView, setMarketView] = useState<'watchlist' | 'stocks' | 'orders' | 'positions' | 'holdings'>('watchlist')
+  const [detailsVisible, setDetailsVisible] = useState(false)
   const [textScale, setTextScale] = useState(() => {
     const saved = Number(localStorage.getItem('terminal.textScale'))
     return Number.isFinite(saved) && saved > 0 ? saved : 1
@@ -97,10 +94,6 @@ function Terminal() {
   }, [textScale])
 
   useEffect(() => {
-    localStorage.setItem('terminal.rightRailWidth', String(Math.round(rightRailWidth)))
-  }, [rightRailWidth])
-
-  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target
       const isTextInput =
@@ -108,16 +101,59 @@ function Terminal() {
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement ||
         (target instanceof HTMLElement && target.isContentEditable)
-      if (!event.metaKey && !event.ctrlKey && !isTextInput) {
-        if (event.key.length === 1 && /[a-z0-9]/i.test(event.key) && !event.altKey) {
+      if (event.key === 'F1') {
+        event.preventDefault()
+        if (!activeToken) return
+        setDetailsVisible((visible) => !visible)
+        return
+      }
+      if (event.key === 'F2') {
+        event.preventDefault()
+        setMarketView('orders')
+        return
+      }
+      if (event.key === 'F3') {
+        event.preventDefault()
+        setMarketView('positions')
+        return
+      }
+      if (event.key === 'F4') {
+        event.preventDefault()
+        setMarketView('holdings')
+        return
+      }
+      if (event.key === 'F5') {
+        event.preventDefault()
+        setMarketView('stocks')
+        return
+      }
+      if (event.key === 'Escape') {
+        if (detailsVisible) {
           event.preventDefault()
-          window.dispatchEvent(new CustomEvent('terminal:quick-search', { detail: { key: event.key } }))
+          setDetailsVisible(false)
           return
         }
+        if (
+          marketView === 'stocks' ||
+          marketView === 'orders' ||
+          marketView === 'positions' ||
+          marketView === 'holdings'
+        ) {
+          event.preventDefault()
+          setMarketView('watchlist')
+          return
+        }
+      }
+      if (!event.metaKey && !event.ctrlKey && !isTextInput) {
         const tab = Number(event.key)
         if (Number.isInteger(tab) && tab >= 1 && tab <= 5) {
           event.preventDefault()
           setActiveWatchlist(tab - 1)
+          return
+        }
+        if (event.key.length === 1 && /[a-z]/i.test(event.key) && !event.altKey) {
+          event.preventDefault()
+          window.dispatchEvent(new CustomEvent('terminal:quick-search', { detail: { key: event.key } }))
         }
       }
 
@@ -143,7 +179,7 @@ function Terminal() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [setActiveWatchlist])
+  }, [activeToken, detailsVisible, marketView, setActiveWatchlist])
 
   const tickerError = useTicksStore((s) => s.error)
 
@@ -155,59 +191,15 @@ function Terminal() {
     return { color: '#6b7280', label: 'IDLE' }
   }, [tickerStatus])
 
-  const resizeBottomDock = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const startY = event.clientY
-    const startHeight = bottomDockHeight
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const nextHeight = startHeight - (moveEvent.clientY - startY)
-      const maxHeight = Math.max(180, Math.floor(window.innerHeight * 0.48))
-      setBottomDockHeight(Math.min(Math.max(nextHeight, 96), maxHeight))
-    }
-
-    const onPointerUp = () => {
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-      document.body.classList.remove('is-resizing-bottom')
-    }
-
-    document.body.classList.add('is-resizing-bottom')
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp, { once: true })
-  }
-
-  const resizeRightRail = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const startX = event.clientX
-    const startWidth = rightRailWidth
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const nextWidth = startWidth - (moveEvent.clientX - startX)
-      const maxWidth = Math.max(320, Math.floor(window.innerWidth * 0.45))
-      setRightRailWidth(Math.min(Math.max(nextWidth, 220), maxWidth))
-    }
-
-    const onPointerUp = () => {
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerUp)
-      document.body.classList.remove('is-resizing-right-rail')
-    }
-
-    document.body.classList.add('is-resizing-right-rail')
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp, { once: true })
-  }
-
   const topBarHeight = Math.round(34 * textScale)
   const statusBarHeight = Math.round(24 * textScale)
 
   const terminalStyle = {
-    gridTemplateRows: `${topBarHeight}px minmax(0, 1fr) 7px ${bottomDockHeight}px ${statusBarHeight}px`,
+    gridTemplateRows: `${topBarHeight}px minmax(0, 1fr) ${statusBarHeight}px`,
     '--terminal-text-scale': textScale,
   } satisfies CSSProperties & { '--terminal-text-scale': number }
   const workspaceStyle = {
-    gridTemplateColumns: `minmax(0, 1fr) 7px ${Math.round(rightRailWidth)}px`,
+    gridTemplateColumns: 'minmax(0, 1fr)',
   } satisfies CSSProperties
 
   return (
@@ -219,26 +211,6 @@ function Terminal() {
         <div className="inline-search">
           <div className="search-and-view-toggle">
             <SymbolSearch />
-            <div className="market-view-tabs" role="tablist" aria-label="Market views">
-              <button
-                type="button"
-                role="tab"
-                className={`watchlist-tab ${marketView === 'watchlist' ? 'active' : ''}`}
-                aria-selected={marketView === 'watchlist'}
-                onClick={() => setMarketView('watchlist')}
-              >
-                WL
-              </button>
-              <button
-                type="button"
-                role="tab"
-                className={`watchlist-tab ${marketView === 'stocks' ? 'active' : ''}`}
-                aria-selected={marketView === 'stocks'}
-                onClick={() => setMarketView('stocks')}
-              >
-                Stocks
-              </button>
-            </div>
           </div>
         </div>
         <div className="account-summary">
@@ -264,11 +236,27 @@ function Terminal() {
           <div className="panel-title">
             <span className="panel-icon" aria-hidden="true">▣</span>
             <div>
-              <h1>{marketView === 'watchlist' ? `Watchlist ${activeWatchlistIndex + 1}` : 'Stocks'}</h1>
+              <h1>
+                {marketView === 'watchlist'
+                  ? `Watchlist ${activeWatchlistIndex + 1}`
+                  : marketView === 'stocks'
+                    ? 'Stocks'
+                    : marketView === 'orders'
+                      ? 'Orders'
+                      : marketView === 'positions'
+                        ? 'Positions'
+                        : 'Holdings'}
+              </h1>
               <p>
                 {marketView === 'watchlist'
                   ? 'Quantity is in Term of NSECDS- Lots - Market Watch'
-                  : 'All instruments grouped alphabetically'}
+                  : marketView === 'stocks'
+                    ? 'All instruments grouped alphabetically'
+                    : marketView === 'orders'
+                      ? 'All orders for current session'
+                      : marketView === 'positions'
+                        ? 'All current open positions'
+                        : 'All holdings in your account'}
               </p>
             </div>
             {marketView === 'watchlist' && (
@@ -296,36 +284,49 @@ function Terminal() {
           </div>
           {marketView === 'watchlist' ? (
             <Watchlist selectedToken={activeToken} onSelect={setSelectedToken} />
+          ) : marketView === 'stocks' ? (
+            <StocksDirectory selectedToken={activeToken} onSelect={setSelectedToken} />
+          ) : marketView === 'positions' ? (
+            <PositionsPanel selectedToken={activeToken} onSelect={setSelectedToken} />
+          ) : marketView === 'holdings' ? (
+            <HoldingsPanel selectedToken={activeToken} onSelect={setSelectedToken} />
           ) : (
-            <StocksDirectory />
+            <OrdersPanel selectedToken={activeToken} onSelect={setSelectedToken} />
           )}
         </section>
 
+      </section>
+
+      {detailsVisible && activeToken && (
         <div
-          className="right-rail-resizer"
-          role="separator"
-          aria-label="Resize order ticket section"
-          aria-orientation="vertical"
-          onPointerDown={resizeRightRail}
-        />
-
-        <aside className="right-rail classic-tools" aria-label="Order ticket and depth">
-          <OrderTicket token={activeToken} />
-          <MarketDepth token={activeToken} />
-        </aside>
-      </section>
-
-      <div
-        className="bottom-resizer"
-        role="separator"
-        aria-label="Resize bottom section"
-        aria-orientation="horizontal"
-        onPointerDown={resizeBottomDock}
-      />
-
-      <section className="bottom-dock">
-        <OrderBook selectedToken={activeToken} onSelectToken={setSelectedToken} />
-      </section>
+          className="details-modal-backdrop"
+          role="button"
+          tabIndex={-1}
+          aria-label="Close details"
+          onClick={() => setDetailsVisible(false)}
+        >
+          <aside
+            className="details-modal"
+            aria-label="Order ticket and depth"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="details-modal-head">
+              <strong>Instrument Details</strong>
+              <button
+                type="button"
+                className="ghost-button compact"
+                onClick={() => setDetailsVisible(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="details-modal-body">
+              <OrderTicket token={activeToken} />
+              <MarketDepth token={activeToken} />
+            </div>
+          </aside>
+        </div>
+      )}
 
       <footer className="status-bar">
         <span>{new Date().toLocaleTimeString()}</span>

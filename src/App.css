@@ -76,12 +76,13 @@
 }
 
 .inline-search {
-  flex: 0 1 460px;
+  flex: 1 1 760px;
   min-width: 0;
 }
 
 .search-and-view-toggle {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) auto auto;
   align-items: center;
   gap: 6px;
 }
@@ -314,6 +315,11 @@ button:disabled {
   gap: 4px;
 }
 
+.top-shortcut-tabs {
+  display: flex;
+  gap: 4px;
+}
+
 .watchlist-tab {
   min-width: 24px;
   height: 20px;
@@ -334,6 +340,22 @@ button:disabled {
 .market-view-tabs .watchlist-tab {
   width: auto;
   padding: 0 8px;
+}
+
+.top-shortcut-tabs .watchlist-tab {
+  width: auto;
+  padding: 0 8px;
+}
+
+@media (max-width: 1280px) {
+  .search-and-view-toggle {
+    grid-template-columns: minmax(260px, 1fr);
+  }
+
+  .market-view-tabs,
+  .top-shortcut-tabs {
+    flex-wrap: wrap;
+  }
 }
 
 .window-controls span {
@@ -542,6 +564,46 @@ button:disabled {
   overflow: auto;
   color: #111;
   background: #d6d6d6;
+}
+
+.details-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.details-modal {
+  width: min(700px, 96vw);
+  max-height: 90vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #6f879c;
+  background: #d6d6d6;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+.details-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  color: #0b1b37;
+  background: linear-gradient(#dff0ff, #8db7df);
+  border: 1px solid #627b92;
+}
+
+.details-modal-body {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 7px;
 }
 
 .right-rail-resizer {
@@ -768,17 +830,12 @@ body.is-resizing-bottom {
 
 .orderbook {
   display: grid;
-  grid-template-rows: calc(28px * var(--terminal-text-scale)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
 }
 
 .orderbook-top-tabs {
-  display: flex;
-  align-items: end;
-  gap: 4px;
-  padding: 4px 6px 0;
-  border-bottom: 1px solid #777;
-  background: #d6d6d6;
+  display: none;
 }
 
 .orderbook-top-tabs .ghost-button {
