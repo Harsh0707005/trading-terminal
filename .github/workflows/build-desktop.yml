@@ -1,11 +1,6 @@
 name: Build desktop apps
 
 on:
-  push:
-    branches:
-      - main
-      - master
-      - "*"
   workflow_dispatch:
 
 jobs:
