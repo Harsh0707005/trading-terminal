@@ -1,0 +1,50 @@
+:root {
+  --app-bg: #20232a;
+  --desktop-bg: #6f737b;
+  --panel-bg: #0f172a;
+  --text: #111827;
+  --line: #9ca3af;
+  --buy: #0b28e8;
+  --sell: #dc1f37;
+  --positive: #58e985;
+  --negative: #ff6b7a;
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: 'SF Mono', Consolas, 'Liberation Mono', monospace;
+
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--app-bg);
+  font-synthesis: none;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+input,
+select,
+button,
+table {
+  font-family: inherit;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
