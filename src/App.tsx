@@ -104,6 +104,11 @@ function Terminal() {
         target instanceof HTMLSelectElement ||
         (target instanceof HTMLElement && target.isContentEditable)
       if (!event.metaKey && !event.ctrlKey && !isTextInput) {
+        if (event.key.length === 1 && /[a-z0-9]/i.test(event.key) && !event.altKey) {
+          event.preventDefault()
+          window.dispatchEvent(new CustomEvent('terminal:quick-search', { detail: { key: event.key } }))
+          return
+        }
         const tab = Number(event.key)
         if (Number.isInteger(tab) && tab >= 1 && tab <= 5) {
           event.preventDefault()

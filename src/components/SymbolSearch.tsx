@@ -1,4 +1,4 @@
-import { useMemo, useState, type FocusEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FocusEvent } from 'react'
 import { useInstrumentsStore } from '../store/instrumentsStore'
 import type { Instrument } from '../types/kite'
 
@@ -13,6 +13,7 @@ export function SymbolSearch() {
   const activeWatchlistIndex = useInstrumentsStore((s) => s.activeWatchlistIndex)
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   const results = useMemo<Instrument[]>(() => {
     if (!loaded || !query.trim()) return []
@@ -25,10 +26,25 @@ export function SymbolSearch() {
     setIsOpen(false)
   }
 
+  useEffect(() => {
+    const onQuickSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<{ key?: string }>
+      const key = customEvent.detail?.key
+      if (!key) return
+      inputRef.current?.focus()
+      setQuery((prev) => `${prev}${key}`)
+      setIsOpen(true)
+    }
+
+    window.addEventListener('terminal:quick-search', onQuickSearch as EventListener)
+    return () => window.removeEventListener('terminal:quick-search', onQuickSearch as EventListener)
+  }, [])
+
   return (
     <div className="symbol-search" onBlur={closeWhenFocusLeaves} onFocus={() => setIsOpen(true)}>
       <div className="search-row">
         <input
+          ref={inputRef}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
