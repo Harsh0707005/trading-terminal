@@ -145,6 +145,13 @@ function BottomPanel({
 
 function OrdersTable({ orders, onCancel }: { orders: Order[]; onCancel: (variety: string, id: string) => void }) {
   if (!orders.length) return <p className="empty-state muted">No orders for the day.</p>
+  const sortedOrders = [...orders].sort((a, b) => {
+    const aTs = toEpochMs(a.order_timestamp ?? a.exchange_timestamp)
+    const bTs = toEpochMs(b.order_timestamp ?? b.exchange_timestamp)
+    if (aTs !== bTs) return bTs - aTs
+    return b.order_id.localeCompare(a.order_id)
+  })
+
   return (
     <div className="market-table-wrap">
       <table className="market-table compact">
@@ -164,7 +171,7 @@ function OrdersTable({ orders, onCancel }: { orders: Order[]; onCancel: (variety
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => (
+          {sortedOrders.map((o) => (
             <tr key={o.order_id}>
               <td>{o.order_timestamp?.slice(11, 19) ?? '—'}</td>
               <td><strong>{o.tradingsymbol}</strong> <span className="muted">{o.exchange}</span></td>
@@ -187,6 +194,15 @@ function OrdersTable({ orders, onCancel }: { orders: Order[]; onCancel: (variety
       </table>
     </div>
   )
+}
+
+function toEpochMs(value: string | null | undefined): number {
+  if (!value) return 0
+  const ts = Date.parse(value)
+  if (!Number.isNaN(ts)) return ts
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T')
+  const fallback = Date.parse(normalized)
+  return Number.isNaN(fallback) ? 0 : fallback
 }
 
 function PositionsTable({ positions }: { positions: Position[] }) {
