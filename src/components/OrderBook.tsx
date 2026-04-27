@@ -6,7 +6,12 @@ import type { Holding, Order, Position } from '../types/kite'
 
 type BottomTab = 'portfolio' | 'orders'
 
-export function OrderBook() {
+type Props = {
+  selectedToken: number | null
+  onSelectToken: (token: number) => void
+}
+
+export function OrderBook({ selectedToken, onSelectToken }: Props) {
   const orders = useOrdersStore((s) => s.orders)
   const positions = useOrdersStore((s) => s.positions)
   const holdings = useOrdersStore((s) => s.holdings)
@@ -96,7 +101,7 @@ export function OrderBook() {
           style={{ gridTemplateColumns: `${portfolioSplit}fr 7px ${100 - portfolioSplit}fr` }}
         >
           <BottomPanel title="Holdings" count={holdings.length}>
-            <HoldingsTable holdings={liveHoldings} />
+            <HoldingsTable holdings={liveHoldings} selectedToken={selectedToken} onSelectToken={onSelectToken} />
           </BottomPanel>
           <div
             className="portfolio-resizer"
@@ -106,13 +111,18 @@ export function OrderBook() {
             onPointerDown={resizePortfolioSplit}
           />
           <BottomPanel title="Positions" count={positions.net?.length ?? 0}>
-            <PositionsTable positions={livePositions} />
+            <PositionsTable positions={livePositions} selectedToken={selectedToken} onSelectToken={onSelectToken} />
           </BottomPanel>
         </div>
       ) : (
         <div className="orders-single">
           <BottomPanel title="Orders" count={orders.length}>
-            <OrdersTable orders={orders} onCancel={cancelOrder} />
+            <OrdersTable
+              orders={orders}
+              selectedToken={selectedToken}
+              onSelectToken={onSelectToken}
+              onCancel={cancelOrder}
+            />
           </BottomPanel>
         </div>
       )}
@@ -143,7 +153,17 @@ function BottomPanel({
   )
 }
 
-function OrdersTable({ orders, onCancel }: { orders: Order[]; onCancel: (variety: string, id: string) => void }) {
+function OrdersTable({
+  orders,
+  selectedToken,
+  onSelectToken,
+  onCancel,
+}: {
+  orders: Order[]
+  selectedToken: number | null
+  onSelectToken: (token: number) => void
+  onCancel: (variety: string, id: string) => void
+}) {
   if (!orders.length) return <p className="empty-state muted">No orders for the day.</p>
   const sortedOrders = [...orders].sort((a, b) => {
     const aTs = toEpochMs(a.order_timestamp ?? a.exchange_timestamp)
@@ -172,7 +192,11 @@ function OrdersTable({ orders, onCancel }: { orders: Order[]; onCancel: (variety
         </thead>
         <tbody>
           {sortedOrders.map((o) => (
-            <tr key={o.order_id}>
+            <tr
+              key={o.order_id}
+              className={selectedToken === o.instrument_token ? 'active-row' : ''}
+              onClick={() => onSelectToken(o.instrument_token)}
+            >
               <td>{o.order_timestamp?.slice(11, 19) ?? '—'}</td>
               <td><strong>{o.tradingsymbol}</strong> <span className="muted">{o.exchange}</span></td>
               <td className={o.transaction_type === 'BUY' ? 'positive' : 'negative'}>{o.transaction_type}</td>
@@ -205,7 +229,15 @@ function toEpochMs(value: string | null | undefined): number {
   return Number.isNaN(fallback) ? 0 : fallback
 }
 
-function PositionsTable({ positions }: { positions: Position[] }) {
+function PositionsTable({
+  positions,
+  selectedToken,
+  onSelectToken,
+}: {
+  positions: Position[]
+  selectedToken: number | null
+  onSelectToken: (token: number) => void
+}) {
   const totals = positions.reduce(
     (acc, position) => ({
       quantity: acc.quantity + (position.quantity || 0),
@@ -233,7 +265,11 @@ function PositionsTable({ positions }: { positions: Position[] }) {
             </thead>
             <tbody>
               {positions.map((p) => (
-                <tr key={`${p.exchange}-${p.tradingsymbol}-${p.product}`}>
+                <tr
+                  key={`${p.exchange}-${p.tradingsymbol}-${p.product}`}
+                  className={selectedToken === p.instrument_token ? 'active-row' : ''}
+                  onClick={() => onSelectToken(p.instrument_token)}
+                >
                   <td><strong>{p.tradingsymbol}</strong> <span className="muted">{p.exchange}</span></td>
                   <td>{p.product}</td>
                   <td className="number">{p.quantity}</td>
@@ -255,7 +291,15 @@ function PositionsTable({ positions }: { positions: Position[] }) {
   )
 }
 
-function HoldingsTable({ holdings }: { holdings: Holding[] }) {
+function HoldingsTable({
+  holdings,
+  selectedToken,
+  onSelectToken,
+}: {
+  holdings: Holding[]
+  selectedToken: number | null
+  onSelectToken: (token: number) => void
+}) {
   const totals = holdings.reduce(
     (acc, holding) => ({
       quantity: acc.quantity + (holding.quantity || 0),
@@ -284,7 +328,11 @@ function HoldingsTable({ holdings }: { holdings: Holding[] }) {
             </thead>
             <tbody>
               {holdings.map((h) => (
-                <tr key={`${h.exchange}-${h.tradingsymbol}`}>
+                <tr
+                  key={`${h.exchange}-${h.tradingsymbol}`}
+                  className={selectedToken === h.instrument_token ? 'active-row' : ''}
+                  onClick={() => onSelectToken(h.instrument_token)}
+                >
                   <td><strong>{h.tradingsymbol}</strong> <span className="muted">{h.exchange}</span></td>
                   <td className="number">{h.quantity}</td>
                   <td className="number">{h.average_price?.toFixed(2)}</td>

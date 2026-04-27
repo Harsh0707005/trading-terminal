@@ -34,6 +34,7 @@ function Terminal() {
 
   const watchlist = useInstrumentsStore((s) => s.watchlist)
   const watchlists = useInstrumentsStore((s) => s.watchlists)
+  const byToken = useInstrumentsStore((s) => s.byToken)
   const activeWatchlistIndex = useInstrumentsStore((s) => s.activeWatchlistIndex)
   const setActiveWatchlist = useInstrumentsStore((s) => s.setActiveWatchlist)
   const loadInstruments = useInstrumentsStore((s) => s.load)
@@ -58,10 +59,7 @@ function Terminal() {
     const saved = Number(localStorage.getItem('terminal.textScale'))
     return Number.isFinite(saved) && saved > 0 ? saved : 1
   })
-  const activeToken =
-    selectedToken != null && watchlist.some((w) => w.instrumentToken === selectedToken)
-      ? selectedToken
-      : (watchlist[0]?.instrumentToken ?? null)
+  const activeToken = selectedToken ?? (watchlist[0]?.instrumentToken ?? null)
 
   useEffect(() => {
     loadWatchlistFromStorage()
@@ -86,6 +84,13 @@ function Terminal() {
     for (const [token, segment] of tokenMap) segments[token] = segment
     subscribeTicks(tokens, 'full', segments)
   }, [watchlists, tickerStatus, subscribeTicks])
+
+  useEffect(() => {
+    if (!activeToken) return
+    if (tickerStatus !== 'connected' && tickerStatus !== 'reconnecting') return
+    const segment = byToken.get(activeToken)?.segment
+    subscribeTicks([activeToken], 'full', segment ? { [activeToken]: segment } : undefined)
+  }, [activeToken, byToken, subscribeTicks, tickerStatus])
 
   useEffect(() => {
     localStorage.setItem('terminal.textScale', textScale.toFixed(2))
@@ -319,7 +324,7 @@ function Terminal() {
       />
 
       <section className="bottom-dock">
-        <OrderBook />
+        <OrderBook selectedToken={activeToken} onSelectToken={setSelectedToken} />
       </section>
 
       <footer className="status-bar">

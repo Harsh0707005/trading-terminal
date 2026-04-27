@@ -10,11 +10,26 @@ export function OrderTicket({ token }: Props) {
   const version = useTicksStore((s) => s.version)
   void version
   const watchlist = useInstrumentsStore((s) => s.watchlist)
+  const byToken = useInstrumentsStore((s) => s.byToken)
   const placeOrder = useOrdersStore((s) => s.placeOrder)
   const lastPlacedId = useOrdersStore((s) => s.lastPlacedId)
   const orderError = useOrdersStore((s) => s.error)
 
-  const entry = useMemo(() => watchlist.find((w) => w.instrumentToken === token), [watchlist, token])
+  const entry = useMemo(() => {
+    const inWatchlist = watchlist.find((w) => w.instrumentToken === token)
+    if (inWatchlist) return inWatchlist
+    if (!token) return undefined
+    const instrument = byToken.get(token)
+    if (!instrument) return undefined
+    return {
+      instrumentToken: instrument.instrumentToken,
+      tradingsymbol: instrument.tradingsymbol,
+      exchange: instrument.exchange,
+      segment: instrument.segment,
+      lotSize: instrument.lotSize,
+      tickSize: instrument.tickSize,
+    }
+  }, [byToken, watchlist, token])
   const tick = token ? useTicksStore.getState().ticks.get(token) : undefined
 
   const [side, setSide] = useState<TransactionType | null>(null)
