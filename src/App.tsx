@@ -9,6 +9,7 @@ import './App.css'
 import { LoginPanel } from './components/LoginPanel'
 import { SymbolSearch } from './components/SymbolSearch'
 import { Watchlist } from './components/Watchlist'
+import { StocksDirectory } from './components/StocksDirectory'
 import { OrderTicket } from './components/OrderTicket'
 import { OrderBook } from './components/OrderBook'
 import { MarketDepth } from './components/MarketDepth'
@@ -47,6 +48,7 @@ function Terminal() {
   const refreshOrders = useOrdersStore((s) => s.refreshAll)
 
   const [selectedToken, setSelectedToken] = useState<number | null>(null)
+  const [marketView, setMarketView] = useState<'watchlist' | 'stocks'>('watchlist')
   const [bottomDockHeight, setBottomDockHeight] = useState(148)
   const [rightRailWidth, setRightRailWidth] = useState(() => {
     const saved = Number(localStorage.getItem('terminal.rightRailWidth'))
@@ -205,7 +207,29 @@ function Terminal() {
     >
       <section className="classic-filter-strip" aria-label="Market watch filters">
         <div className="inline-search">
-          <SymbolSearch />
+          <div className="search-and-view-toggle">
+            <SymbolSearch />
+            <div className="market-view-tabs" role="tablist" aria-label="Market views">
+              <button
+                type="button"
+                role="tab"
+                className={`watchlist-tab ${marketView === 'watchlist' ? 'active' : ''}`}
+                aria-selected={marketView === 'watchlist'}
+                onClick={() => setMarketView('watchlist')}
+              >
+                WL
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={`watchlist-tab ${marketView === 'stocks' ? 'active' : ''}`}
+                aria-selected={marketView === 'stocks'}
+                onClick={() => setMarketView('stocks')}
+              >
+                Stocks
+              </button>
+            </div>
+          </div>
         </div>
         <div className="account-summary">
           <span
@@ -230,31 +254,41 @@ function Terminal() {
           <div className="panel-title">
             <span className="panel-icon" aria-hidden="true">▣</span>
             <div>
-              <h1>Watchlist {activeWatchlistIndex + 1}</h1>
-              <p>Quantity is in Term of NSECDS- Lots - Market Watch</p>
+              <h1>{marketView === 'watchlist' ? `Watchlist ${activeWatchlistIndex + 1}` : 'Stocks'}</h1>
+              <p>
+                {marketView === 'watchlist'
+                  ? 'Quantity is in Term of NSECDS- Lots - Market Watch'
+                  : 'All instruments grouped alphabetically'}
+              </p>
             </div>
-            <div className="watchlist-tabs" role="tablist" aria-label="Watchlist tabs">
-              {watchlists.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  role="tab"
-                  className={`watchlist-tab ${index === activeWatchlistIndex ? 'active' : ''}`}
-                  aria-selected={index === activeWatchlistIndex}
-                  onClick={() => setActiveWatchlist(index)}
-                  title={`Switch to watchlist ${index + 1}`}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </div>
+            {marketView === 'watchlist' && (
+              <div className="watchlist-tabs" role="tablist" aria-label="Watchlist tabs">
+                {watchlists.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    role="tab"
+                    className={`watchlist-tab ${index === activeWatchlistIndex ? 'active' : ''}`}
+                    aria-selected={index === activeWatchlistIndex}
+                    onClick={() => setActiveWatchlist(index)}
+                    title={`Switch to watchlist ${index + 1}`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="window-controls" aria-hidden="true">
               <span />
               <span />
               <span />
             </div>
           </div>
-          <Watchlist selectedToken={activeToken} onSelect={setSelectedToken} />
+          {marketView === 'watchlist' ? (
+            <Watchlist selectedToken={activeToken} onSelect={setSelectedToken} />
+          ) : (
+            <StocksDirectory />
+          )}
         </section>
 
         <div

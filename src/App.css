@@ -80,6 +80,17 @@
   min-width: 0;
 }
 
+.search-and-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-and-view-toggle .symbol-search {
+  flex: 1;
+  min-width: 0;
+}
+
 .account-summary {
   display: flex;
   align-items: center;
@@ -298,8 +309,13 @@ button:disabled {
   gap: 4px;
 }
 
+.market-view-tabs {
+  display: flex;
+  gap: 4px;
+}
+
 .watchlist-tab {
-  width: 24px;
+  min-width: 24px;
   height: 20px;
   border: 1px solid #708090;
   color: #0b1b37;
@@ -313,6 +329,11 @@ button:disabled {
   color: #fff;
   background: #0b22ff;
   border-color: #0b22ff;
+}
+
+.market-view-tabs .watchlist-tab {
+  width: auto;
+  padding: 0 8px;
 }
 
 .window-controls span {
@@ -377,6 +398,54 @@ button:disabled {
 
 .market-table.compact td {
   height: var(--compact-row-h);
+}
+
+.stocks-directory {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  background: #050505;
+}
+
+.stocks-pagination {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid #1f2937;
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
+.stocks-group {
+  border: 1px solid #1f2937;
+  background: #090d14;
+}
+
+.stocks-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid #2f3f54;
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
+.stocks-group-table-wrap {
+  overflow: auto;
+}
+
+.stocks-table {
+  min-width: 720px;
 }
 
 .number {
