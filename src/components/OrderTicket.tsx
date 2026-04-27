@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTicksStore } from '../store/ticksStore'
 import { useInstrumentsStore } from '../store/instrumentsStore'
 import { useOrdersStore } from '../store/ordersStore'
@@ -27,6 +27,19 @@ export function OrderTicket({ token }: Props) {
   const [triggerPrice, setTriggerPrice] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState<string | null>(null)
+  const lastTokenRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!token) {
+      lastTokenRef.current = null
+      return
+    }
+    if (lastTokenRef.current === token) return
+    lastTokenRef.current = token
+    setPrice(tick?.lastPrice != null ? tick.lastPrice.toFixed(2) : '')
+    setTriggerPrice('')
+    setConfirmation(null)
+  }, [token, tick?.lastPrice])
 
   if (!entry || !token) {
     return <div className="empty-state"><p className="muted">Select an instrument to place orders.</p></div>
