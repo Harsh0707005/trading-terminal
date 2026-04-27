@@ -36,6 +36,9 @@ jobs:
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: "true"
+      KITE_API_KEY: ${{ secrets.KITE_API_KEY }}
+      KITE_API_SECRET: ${{ secrets.KITE_API_SECRET }}
+      MOCK_FEED_PORT: ${{ secrets.MOCK_FEED_PORT }}
 
     steps:
       - name: Checkout repository
@@ -48,7 +51,18 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+
+      - name: Create .env from GitHub Secrets
+        shell: bash
+        run: |
+          {
+            echo "KITE_API_KEY=${KITE_API_KEY}"
+            echo "KITE_API_SECRET=${KITE_API_SECRET}"
+            if [ -n "${MOCK_FEED_PORT}" ]; then
+              echo "MOCK_FEED_PORT=${MOCK_FEED_PORT}"
+            fi
+          } > .env
 
       - name: Build web assets
         run: npm run build
