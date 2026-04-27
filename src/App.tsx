@@ -41,6 +41,7 @@ function Terminal() {
 
   const startTicker = useTicksStore((s) => s.start)
   const stopTicker = useTicksStore((s) => s.stop)
+  const subscribeTicks = useTicksStore((s) => s.subscribe)
   const tickerStatus = useTicksStore((s) => s.status)
 
   const refreshOrders = useOrdersStore((s) => s.refreshAll)
@@ -70,6 +71,19 @@ function Terminal() {
     startTicker(session.apiKey, session.accessToken)
     return () => stopTicker()
   }, [session.apiKey, session.accessToken, startTicker, stopTicker])
+
+  useEffect(() => {
+    if (tickerStatus !== 'connected' && tickerStatus !== 'reconnecting') return
+    const tokenMap = new Map<number, string>()
+    for (const list of watchlists) {
+      for (const item of list) tokenMap.set(item.instrumentToken, item.segment)
+    }
+    if (!tokenMap.size) return
+    const tokens = [...tokenMap.keys()]
+    const segments: Record<number, string> = {}
+    for (const [token, segment] of tokenMap) segments[token] = segment
+    subscribeTicks(tokens, 'full', segments)
+  }, [watchlists, tickerStatus, subscribeTicks])
 
   useEffect(() => {
     localStorage.setItem('terminal.textScale', textScale.toFixed(2))

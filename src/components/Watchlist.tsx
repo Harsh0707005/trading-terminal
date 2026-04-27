@@ -19,19 +19,17 @@ export function Watchlist({ selectedToken, onSelect }: Props) {
   const status = useTicksStore((s) => s.status)
 
   useEffect(() => {
+    if (status !== 'connected' && status !== 'reconnecting') return
     if (!watchlist.length) return
     const tokens = watchlist.map((w) => w.instrumentToken)
     const segments: Record<number, string> = {}
     for (const w of watchlist) segments[w.instrumentToken] = w.segment
-    // selected gets full mode for depth, others get quote
-    const mainTokens = selectedToken ? [selectedToken] : []
-    const otherTokens = tokens.filter((t) => t !== selectedToken)
-    if (otherTokens.length) subscribe(otherTokens, 'quote', segments)
-    if (mainTokens.length) subscribe(mainTokens, 'full', segments)
+    // Buy/Sell price and qty require full mode depth packets.
+    subscribe(tokens, 'full', segments)
     return () => {
       // do not unsubscribe on every render — only on token list change
     }
-  }, [watchlist, selectedToken, subscribe])
+  }, [watchlist, selectedToken, status, subscribe])
 
   if (!watchlist.length) {
     return (
