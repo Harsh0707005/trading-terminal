@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type UIEvent } from 'react'
 import { useInstrumentsStore } from '../store/instrumentsStore'
 import type { Instrument } from '../types/kite'
 
@@ -14,8 +14,8 @@ export function StocksDirectory() {
   const searchPool = useInstrumentsStore((s) => s.searchPool)
   const watchlist = useInstrumentsStore((s) => s.watchlist)
   const addToWatchlist = useInstrumentsStore((s) => s.addToWatchlist)
-  const [page, setPage] = useState(1)
-  const pageSize = 250
+  const chunkSize = 250
+  const [visibleCount, setVisibleCount] = useState(chunkSize)
 
   const sorted = useMemo<Instrument[]>(
     () =>
@@ -30,18 +30,19 @@ export function StocksDirectory() {
     [searchPool],
   )
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  const safePage = Math.min(page, totalPages)
+  useEffect(() => {
+    setVisibleCount(chunkSize)
+  }, [sorted.length])
 
-  const pageSlice = useMemo<Instrument[]>(() => {
-    const start = (safePage - 1) * pageSize
-    return sorted.slice(start, start + pageSize)
-  }, [safePage, sorted])
+  const visibleItems = useMemo<Instrument[]>(
+    () => sorted.slice(0, visibleCount),
+    [sorted, visibleCount],
+  )
 
   const grouped = useMemo<Group[]>(() => {
     const sections = new Map<string, Instrument[]>()
 
-    for (const instrument of pageSlice) {
+    for (const instrument of visibleItems) {
       const firstChar = instrument.tradingsymbol?.[0]?.toUpperCase() ?? '#'
       if (!/[A-Z]/.test(firstChar)) continue
       const letter = firstChar
@@ -56,7 +57,20 @@ export function StocksDirectory() {
     return [...sections.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([letter, items]) => ({ letter, items }))
-  }, [pageSlice])
+  }, [visibleItems])
+
+  const hasMore = visibleCount < sorted.length
+  const loadMore = () => {
+    if (!hasMore) return
+    setVisibleCount((count) => Math.min(count + chunkSize, sorted.length))
+  }
+
+  const onScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMore) return
+    const element = event.currentTarget
+    const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight
+    if (distanceToBottom <= 160) loadMore()
+  }
 
   if (!loaded) {
     return (
@@ -70,28 +84,12 @@ export function StocksDirectory() {
   }
 
   return (
-    <div className="stocks-directory">
+    <div className="stocks-directory" onScroll={onScroll}>
       <div className="stocks-pagination">
-        <button
-          type="button"
-          className="ghost-button compact"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={safePage <= 1}
-        >
-          Prev
-        </button>
         <span>
-          Page {safePage} of {totalPages}
+          Showing {visibleItems.length.toLocaleString('en-IN')} / {sorted.length.toLocaleString('en-IN')}
         </span>
-        <button
-          type="button"
-          className="ghost-button compact"
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={safePage >= totalPages}
-        >
-          Next
-        </button>
-        <span>{sorted.length.toLocaleString('en-IN')} instruments</span>
+        {!hasMore && <span>All loaded</span>}
       </div>
       {grouped.map((group) => (
         <section key={group.letter} className="stocks-group" aria-label={`Section ${group.letter}`}>
