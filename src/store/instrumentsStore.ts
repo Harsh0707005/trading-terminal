@@ -40,6 +40,16 @@ function emptyWatchlists(): WatchlistEntry[][] {
   return Array.from({ length: WATCHLIST_COUNT }, () => [])
 }
 
+function sortWatchlist(list: WatchlistEntry[]): WatchlistEntry[] {
+  return [...list].sort((a, b) => {
+    const symbolCompare = a.tradingsymbol.localeCompare(b.tradingsymbol, undefined, { sensitivity: 'base' })
+    if (symbolCompare !== 0) return symbolCompare
+    const exchangeCompare = a.exchange.localeCompare(b.exchange, undefined, { sensitivity: 'base' })
+    if (exchangeCompare !== 0) return exchangeCompare
+    return a.instrumentToken - b.instrumentToken
+  })
+}
+
 function isWatchlistEntry(value: unknown): value is WatchlistEntry {
   if (!value || typeof value !== 'object') return false
   const entry = value as Partial<WatchlistEntry>
@@ -59,7 +69,7 @@ function normalizeWatchlists(raw: unknown): WatchlistEntry[][] {
   for (let i = 0; i < Math.min(raw.length, WATCHLIST_COUNT); i += 1) {
     const maybeList = raw[i]
     if (!Array.isArray(maybeList)) continue
-    nextWatchlists[i] = maybeList.filter(isWatchlistEntry)
+    nextWatchlists[i] = sortWatchlist(maybeList.filter(isWatchlistEntry))
   }
   return nextWatchlists
 }
@@ -102,7 +112,7 @@ export const useInstrumentsStore = create<InstrumentsState>((set, get) => ({
     const { watchlists, activeWatchlistIndex } = get()
     const cur = watchlists[activeWatchlistIndex] ?? []
     if (cur.some((w) => w.instrumentToken === i.instrumentToken)) return
-    const nextActive: WatchlistEntry[] = [
+    const nextActive = sortWatchlist([
       ...cur,
       {
         instrumentToken: i.instrumentToken,
@@ -112,14 +122,14 @@ export const useInstrumentsStore = create<InstrumentsState>((set, get) => ({
         lotSize: i.lotSize,
         tickSize: i.tickSize,
       },
-    ]
+    ])
     const nextWatchlists = watchlists.map((list, idx) => (idx === activeWatchlistIndex ? nextActive : list))
     set({ watchlists: nextWatchlists, watchlist: nextActive })
     try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(nextWatchlists)) } catch { void 0 }
   },
   removeFromWatchlist: (token) => {
     const { watchlists, activeWatchlistIndex } = get()
-    const nextActive = (watchlists[activeWatchlistIndex] ?? []).filter((w) => w.instrumentToken !== token)
+    const nextActive = sortWatchlist((watchlists[activeWatchlistIndex] ?? []).filter((w) => w.instrumentToken !== token))
     const nextWatchlists = watchlists.map((list, idx) => (idx === activeWatchlistIndex ? nextActive : list))
     set({ watchlists: nextWatchlists, watchlist: nextActive })
     try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(nextWatchlists)) } catch { void 0 }
@@ -142,7 +152,7 @@ export const useInstrumentsStore = create<InstrumentsState>((set, get) => ({
       if (legacy) {
         const first = JSON.parse(legacy) as WatchlistEntry[]
         const nextWatchlists = emptyWatchlists()
-        nextWatchlists[0] = Array.isArray(first) ? first : []
+        nextWatchlists[0] = Array.isArray(first) ? sortWatchlist(first.filter(isWatchlistEntry)) : []
         set({ watchlists: nextWatchlists, watchlist: nextWatchlists[0], activeWatchlistIndex: 0 })
         localStorage.setItem(WATCHLIST_KEY, JSON.stringify(nextWatchlists))
       }
